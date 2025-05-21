@@ -29,12 +29,14 @@ router.put("/:id", async (req: Request, res: Response) => {
     items.length === 0
   ) {
     res.status(400).json({ message: "Invalid order data" });
+    return;
   }
 
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
+
 
     const existing = await client.query(`SELECT id FROM orders WHERE id = $1`, [
       id,
@@ -45,13 +47,22 @@ router.put("/:id", async (req: Request, res: Response) => {
       return;
     }
 
+
     const productIds = items.map((item: any) => item.product_id);
     const placeholders = productIds.map((_, i) => `$${i + 1}`).join(", ");
     const productQuery = await client.query(
       `SELECT id, unit_price FROM products WHERE id IN (${placeholders})`,
       productIds
     );
-  } catch (error) {}
+
+
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error updating order:", error);
+    res.status(500).json({ message: "Error updating order" });
+  } finally {
+    client.release();
+  }
 });
 
 router.get("/:id", async (req: Request, res: Response) => {
@@ -71,7 +82,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     const order = orderResult.rows[0];
 
-    // Obtener los productos asociados
+
     const itemsResult = await pool.query(
       `SELECT oi.product_id, p.name, p.unit_price, oi.quantity
        FROM order_items oi
