@@ -55,7 +55,36 @@ router.put("/:id", async (req: Request, res: Response) => {
       productIds
     );
 
+    const priceMap: Record<number, number> = {};
+    for (const row of productQuery.rows) {
+      priceMap[row.id] = parseFloat(row.unit_price);
+    }
 
+    const total_price = items.reduce((acc: number, item: any) => {
+      const price = priceMap[item.product_id] || 0;
+      return acc + price * item.quantity;
+    }, 0);
+
+
+    await client.query(
+      `UPDATE orders SET order_number = $1, date = $2, total_price = $3, status = $4 WHERE id = $5`,
+      [order_number, date, total_price, status, id]
+    );
+
+
+    await client.query(`DELETE FROM order_items WHERE order_id = $1`, [id]);
+
+
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO order_items (order_id, product_id, quantity)
+         VALUES ($1, $2, $3)`,
+        [id, item.product_id, item.quantity]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.json({ message: "Order updated", order_id: id });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error updating order:", error);
