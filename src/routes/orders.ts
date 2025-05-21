@@ -37,7 +37,6 @@ router.put("/:id", async (req: Request, res: Response) => {
   try {
     await client.query("BEGIN");
 
-
     const existing = await client.query(`SELECT id FROM orders WHERE id = $1`, [
       id,
     ]);
@@ -46,7 +45,6 @@ router.put("/:id", async (req: Request, res: Response) => {
       res.status(404).json({ message: "Order not found" });
       return;
     }
-
 
     const productIds = items.map((item: any) => item.product_id);
     const placeholders = productIds.map((_, i) => `$${i + 1}`).join(", ");
@@ -65,15 +63,12 @@ router.put("/:id", async (req: Request, res: Response) => {
       return acc + price * item.quantity;
     }, 0);
 
-
     await client.query(
       `UPDATE orders SET order_number = $1, date = $2, total_price = $3, status = $4 WHERE id = $5`,
       [order_number, date, total_price, status, id]
     );
 
-
     await client.query(`DELETE FROM order_items WHERE order_id = $1`, [id]);
-
 
     for (const item of items) {
       await client.query(
@@ -110,7 +105,6 @@ router.get("/:id", async (req: Request, res: Response) => {
     }
 
     const order = orderResult.rows[0];
-
 
     const itemsResult = await pool.query(
       `SELECT oi.product_id, p.name, p.unit_price, oi.quantity
@@ -187,6 +181,40 @@ router.post("/", async (req: Request, res: Response) => {
     await client.query("ROLLBACK");
     console.error("Error creating order:", error);
     res.status(500).json({ message: "Error creating order" });
+  } finally {
+    client.release();
+  }
+});
+
+router.delete("/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Verificar si existe la orden
+    const result = await client.query(`SELECT id FROM orders WHERE id = $1`, [
+      id,
+    ]);
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+
+    // Primero eliminar los productos asociados
+    await client.query(`DELETE FROM order_items WHERE order_id = $1`, [id]);
+
+    // Luego eliminar la orden
+    await client.query(`DELETE FROM orders WHERE id = $1`, [id]);
+
+    await client.query("COMMIT");
+    res.json({ message: "Order deleted", order_id: id });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting order:", error);
+    res.status(500).json({ message: "Error deleting order" });
   } finally {
     client.release();
   }
