@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, RequestHandler } from "express";
 import pool from "../db";
 
 const router = Router();
@@ -14,6 +14,72 @@ router.get("/", async (_req: Request, res: Response) => {
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).json({ message: "Error fetching orders" });
+  }
+});
+
+router.put("/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { order_number, date, status, items } = req.body;
+
+  if (
+    !order_number ||
+    !date ||
+    !status ||
+    !Array.isArray(items) ||
+    items.length === 0
+  ) {
+    res.status(400).json({ message: "Invalid order data" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const existing = await client.query(`SELECT id FROM orders WHERE id = $1`, [
+      id,
+    ]);
+    if (existing.rows.length === 0) {
+      await client.query("ROLLBACK");
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+    
+  } catch (error) {}
+});
+
+router.get("/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    // Obtener la orden principal
+    const orderResult = await pool.query(
+      `SELECT id, order_number, date, total_price, status FROM orders WHERE id = $1`,
+      [id]
+    );
+
+    if (orderResult.rows.length === 0) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+
+    const order = orderResult.rows[0];
+
+    // Obtener los productos asociados
+    const itemsResult = await pool.query(
+      `SELECT oi.product_id, p.name, p.unit_price, oi.quantity
+       FROM order_items oi
+       JOIN products p ON oi.product_id = p.id
+       WHERE oi.order_id = $1`,
+      [id]
+    );
+
+    order.items = itemsResult.rows;
+
+    res.json(order);
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    res.status(500).json({ message: "Error fetching order details" });
   }
 });
 
