@@ -1,9 +1,10 @@
 import { Router } from "express";
 import pool from "../db";
+import type { Request, Response } from "express";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
+router.get("/", async (_req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT id, order_number, date, total_price, status
