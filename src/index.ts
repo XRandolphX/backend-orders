@@ -3,7 +3,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import productsRoutes from "./routes/products";
 import ordersRoutes from "./routes/orders";
-// import type { Request, Response } from "express";
 
 dotenv.config();
 
@@ -21,7 +20,7 @@ app.get("/", (_req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(` Server running on http://localhost: ${PORT}`);
+  console.log(` Server running on http://localhost:${PORT}`);
 });
 
 
