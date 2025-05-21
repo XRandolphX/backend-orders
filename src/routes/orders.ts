@@ -1,6 +1,5 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import pool from "../db";
-import type { Request, Response } from "express";
 
 const router = Router();
 
