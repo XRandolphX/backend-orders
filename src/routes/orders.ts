@@ -17,7 +17,7 @@ router.get("/", async (_req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", async (req: Request, res: Response): Promise<void> => {
   const { order_number, date, status, items } = req.body;
   if (
     !order_number ||
@@ -26,9 +26,18 @@ router.post("/", async (req: Request, res: Response) => {
     !Array.isArray(items) ||
     items.length === 0
   ) {
-    const client = await pool.connect();
+    
   }
-  
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error creating order", error);
+    res.status(500).json({ message: "Error creating data" });
+  }
 });
 
 export default router;
