@@ -44,7 +44,13 @@ router.put("/:id", async (req: Request, res: Response) => {
       res.status(404).json({ message: "Order not found" });
       return;
     }
-    
+
+    const productIds = items.map((item: any) => item.product_id);
+    const placeholders = productIds.map((_, i) => `$${i + 1}`).join(", ");
+    const productQuery = await client.query(
+      `SELECT id, unit_price FROM products WHERE id IN (${placeholders})`,
+      productIds
+    );
   } catch (error) {}
 });
 
