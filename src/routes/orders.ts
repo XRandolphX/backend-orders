@@ -59,7 +59,24 @@ router.post("/", async (req: Request, res: Response) => {
       return acc + price * item.quantity;
     }, 0);
 
+    const orderResult = await client.query(
+      `INSERT INTO orders (order_number, date, total_price, status)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [order_number, date, total_price, status]
+    );
 
+    const orderId = orderResult.rows[0].id;
+
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO order_items (order_id, product_id, quantity)
+         VALUES ($1, $2, $3)`,
+        [orderId, item.product_id, item.quantity]
+      );
+    }
+
+    await client.query("COMMIT");
+    res.status(201).json({ message: "Order created", order_id: orderId });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error creating order:", error);
