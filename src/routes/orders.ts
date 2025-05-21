@@ -17,4 +17,18 @@ router.get("/", async (_req: Request, res: Response) => {
   }
 });
 
+router.post("/", async (req: Request, res: Response) => {
+  const { order_number, date, status, items } = req.body;
+  if (
+    !order_number ||
+    !date ||
+    !status ||
+    !Array.isArray(items) ||
+    items.length === 0
+  ) {
+    const client = await pool.connect();
+  }
+  
+});
+
 export default router;
