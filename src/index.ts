@@ -16,7 +16,7 @@ app.use("/api/products", productsRoutes);
 app.use("/api/orders", ordersRoutes);
 
 app.get("/", (_req, res) => {
-  res.send("API is running");
+  res.send("API is running - Randolph Ramirez");
 });
 
 app.listen(PORT, () => {
